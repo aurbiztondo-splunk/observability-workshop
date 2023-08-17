@@ -199,12 +199,24 @@ locals {
   }
 }
 
+# ED25519 key
+resource "tls_private_key" "pk" {
+  algorithm = "ED25519"
+}
+
+resource "aws_key_pair" "kp" {
+  key_name   = "o11y-workshop-${var.slug}-kp"
+  public_key = tls_private_key.pk.public_key_openssh
+}
+
 resource "aws_instance" "observability-instance" {
   count                  = var.aws_instance_count
   ami                    = data.aws_ami.latest-ubuntu.id
   instance_type          = var.aws_instance_type
   subnet_id              = aws_subnet.o11y_ws_subnets.*.id[count.index % length(aws_subnet.o11y_ws_subnets)]
   vpc_security_group_ids = [aws_security_group.o11y-ws-sg.id]
+
+  key_name = aws_key_pair.kp.key_name
 
   user_data = templatefile("${path.module}/templates/${var.user_data_tpl}", merge(local.template_vars,
     {
@@ -242,4 +254,23 @@ resource "aws_instance" "observability-instance" {
       error_message = "splunk_realm and splunk_access_token are required and cannot be null/empty."
     }
   }
+}
+
+locals {
+  ssh_priv_key = "~/.ssh/config.d/${var.slug}"
+}
+
+resource "local_sensitive_file" "ssh_priv_key" {
+  filename = "~/.ssh/id_o11y-workshop-${var.slug}"
+  content  = tls_private_key.pk.private_key_pem
+}
+
+resource "local_file" "ssh_client_config" {
+  filename = "~/.ssh/config.d/o11y-workshop-${var.slug}"
+  content = templatefile("${path.module}/templates/ssh_client_config.tpl",
+    {
+      ips : aws_instance.observability-instance[*].public_ip
+      names : aws_instance.observability-instance[*].tags["Instance"]
+      key : local.ssh_priv_key
+  })
 }
