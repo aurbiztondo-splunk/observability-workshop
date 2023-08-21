@@ -183,6 +183,16 @@ resource "random_string" "password" {
   override_special = "_%@$#"
 }
 
+# ED25519 key
+resource "tls_private_key" "pk" {
+  algorithm = "ED25519"
+}
+
+resource "aws_key_pair" "kp" {
+  key_name   = "o11y-workshop-${var.slug}-kp"
+  public_key = tls_private_key.pk.public_key_openssh
+}
+
 locals {
   template_vars = {
     access_token      = var.splunk_access_token
@@ -195,18 +205,8 @@ locals {
     otel_demo         = var.otel_demo
     wsversion         = var.wsversion
     instance_password = random_string.password.result
-    pub_key           = var.pub_key
+    pub_key           = tls_private_key.pk.public_key_openssh
   }
-}
-
-# ED25519 key
-resource "tls_private_key" "pk" {
-  algorithm = "ED25519"
-}
-
-resource "aws_key_pair" "kp" {
-  key_name   = "o11y-workshop-${var.slug}-kp"
-  public_key = tls_private_key.pk.public_key_openssh
 }
 
 resource "aws_instance" "observability-instance" {
@@ -257,16 +257,20 @@ resource "aws_instance" "observability-instance" {
 }
 
 locals {
-  ssh_priv_key = "~/.ssh/config.d/${var.slug}"
+  ssh_priv_key = pathexpand("~/.ssh/id_o11y-workshop-${var.slug}")
 }
 
 resource "local_sensitive_file" "ssh_priv_key" {
-  filename = "~/.ssh/id_o11y-workshop-${var.slug}"
-  content  = tls_private_key.pk.private_key_pem
+  filename = local.ssh_priv_key
+  file_permission = "400"
+  # directory_permission = "700"
+  # content  = tls_private_key.pk.private_key_pem
+  content  = tls_private_key.pk.private_key_openssh
 }
 
 resource "local_file" "ssh_client_config" {
-  filename = "~/.ssh/config.d/o11y-workshop-${var.slug}"
+  filename = pathexpand("~/.ssh/config.d/o11y-workshop-${var.slug}")
+  file_permission = "600"
   content = templatefile("${path.module}/templates/ssh_client_config.tpl",
     {
       ips : aws_instance.observability-instance[*].public_ip
