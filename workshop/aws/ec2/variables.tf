@@ -88,7 +88,7 @@ variable "splunk_hec_info" {
   nullable    = true
   type = list(object({
     token = string
-    url = string
+    url   = string
   }))
 }
 
