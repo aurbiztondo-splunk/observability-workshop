@@ -83,6 +83,15 @@ variable "splunk_hec_url" {
   nullable    = false
 }
 
+variable "splunk_hec_info" {
+  description = "A list of Splunk HEC tokens and urls with length equal to aws_instance_count"
+  nullable    = true
+  type = list(object({
+    token = string
+    url = string
+  }))
+}
+
 data "aws_ami" "latest-ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # This is the owner id of Canonical who owns the official aws ubuntu images
