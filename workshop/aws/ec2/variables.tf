@@ -75,12 +75,12 @@ variable "splunk_realm" {
 
 variable "splunk_hec_token" {
   description = "Splunk Cloud HEC Token"
-  nullable    = false
+  default     = ""
 }
 
 variable "splunk_hec_url" {
   description = "Splunk Cloud HEC URL"
-  nullable    = false
+  default     = ""
 }
 
 variable "splunk_hec_info" {

@@ -228,8 +228,7 @@ resource "aws_instance" "observability-instance" {
   user_data = templatefile("${path.module}/templates/${var.user_data_tpl}", merge(local.template_vars,
     {
       instance_name = "${lower(var.slug)}-${count.index + 1}"
-      hec_info      = try(var.splunk_hec_info) ? var.splunk_hec_info[count.index] : { token = var.splunk_hec_token, url = var.splunk_hec_url }
-
+      hec_info      = try(var.splunk_hec_info[count.index], { token = var.splunk_hec_token, url = var.splunk_hec_url })
   }))
 
   root_block_device {
@@ -281,7 +280,7 @@ resource "aws_instance" "observability-instance" {
     }
     precondition {
       # either splunk_hec_token and splunk_hec_url are defined, or splunk_hec_info is defined, but not both
-      condition     = try(var.splunk_hec_info, "") != "" ? try(var.splunk_hec_url) == false && try(var.splunk_hec_token) == false : true
+      condition     = try(var.splunk_hec_info, "") != "" ? try(var.splunk_hec_url, "") == "" && try(var.splunk_hec_token, "") == "" : true
       error_message = "if splunk_hec_info is defined, splunk_hec_token and splunk_hec_url may not be defined"
     }
     precondition {
