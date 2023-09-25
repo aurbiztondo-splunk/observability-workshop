@@ -85,7 +85,7 @@ variable "splunk_hec_url" {
 
 variable "splunk_hec_info" {
   description = "A list of Splunk HEC tokens and urls with length equal to aws_instance_count"
-  nullable    = true
+  default     = []
   type = list(object({
     token = string
     url   = string
